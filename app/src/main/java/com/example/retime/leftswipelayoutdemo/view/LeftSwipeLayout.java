@@ -18,9 +18,12 @@ public class LeftSwipeLayout extends LinearLayout {
 
     public static final int STATE_CLOSED = 0;
     public static final int STATE_OPEN = 1;
-    public static final int STATE_SCROLL = 2;
 
     private int state = STATE_CLOSED;
+
+    private boolean scrolling;
+
+    private View rightLayout;
 
     private Scroller mScroller;
 
@@ -35,6 +38,11 @@ public class LeftSwipeLayout extends LinearLayout {
     public LeftSwipeLayout(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mScroller = new Scroller(context);
+    }
+
+    @Override
+    protected void onFinishInflate() {
+        super.onFinishInflate();
         if (getChildCount() == 2 && getOrientation() == HORIZONTAL) {
             View mainLayout = getChildAt(0);
             LayoutParams mainLayoutParams = (LayoutParams) mainLayout.getLayoutParams();
@@ -44,6 +52,7 @@ public class LeftSwipeLayout extends LinearLayout {
                 mainLayout.setLayoutParams(new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT));
             }
+            rightLayout = getChildAt(1);
         }
     }
 
@@ -53,16 +62,14 @@ public class LeftSwipeLayout extends LinearLayout {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (getChildCount() != 2 || getOrientation() != HORIZONTAL) {
-            return false;
+            return super.onTouchEvent(event);
         }
-//        View mainLayout = getChildAt(0);
-        View rightLayout = getChildAt(1);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 downPoint.set(event.getX(), event.getY());
                 return true;
             case MotionEvent.ACTION_MOVE:
-                if (state == STATE_SCROLL) {
+                if (scrolling) {
                     float offsetX = event.getX() - lastX;
                     //滑动逻辑
                     if ((getScrollX() >= rightLayout.getWidth() && offsetX <= 0)
@@ -84,7 +91,7 @@ public class LeftSwipeLayout extends LinearLayout {
                 float startScrollOffset = 10;
                 if (offsetXAbs > startScrollOffset || offsetYAbs > startScrollOffset) { //滑动超过一定距离
                     if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移
-                        state = STATE_SCROLL;
+                        scrolling = true;
                         lastX = event.getX();
                         return true;
                     } else {
@@ -95,22 +102,31 @@ public class LeftSwipeLayout extends LinearLayout {
                 }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (state == STATE_SCROLL) {
+                if (scrolling) {
                     //复位逻辑，展开或关闭
                     if (getScrollX() < rightLayout.getWidth() / 2) {
-//                        scrollTo(0, 0);
-                        mScroller.startScroll(getScrollX(), 0, -getScrollX(), 0);
-                        state = STATE_CLOSED;
+                        close();
                     } else {
-//                        scrollTo(rightLayout.getWidth(), 0);
-                        mScroller.startScroll(getScrollX(), 0, rightLayout.getWidth() - getScrollX(), 0);
-                        state = STATE_OPEN;
+                        open();
                     }
-                    invalidate();
+                    scrolling = false;
                 }
                 break;
         }
         return super.onTouchEvent(event);
+    }
+
+    public void close() {
+        mScroller.startScroll(getScrollX(), 0, -getScrollX(), 0);
+        state = STATE_CLOSED;
+        postInvalidate();
+    }
+
+    public void open() {
+        int rightLayoutWidth = rightLayout == null ? 0 : rightLayout.getWidth();
+        mScroller.startScroll(getScrollX(), 0, rightLayoutWidth - getScrollX(), 0);
+        state = STATE_OPEN;
+        postInvalidate();
     }
 
     @Override
@@ -118,7 +134,7 @@ public class LeftSwipeLayout extends LinearLayout {
         super.computeScroll();
         if (mScroller.computeScrollOffset()) {
             scrollTo(mScroller.getCurrX(), 0);
-            invalidate();
+            postInvalidate();
         }
     }
 }
