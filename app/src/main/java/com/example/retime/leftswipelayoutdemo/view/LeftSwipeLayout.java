@@ -1,11 +1,11 @@
 package com.example.retime.leftswipelayoutdemo.view;
 
 import android.content.Context;
-import android.graphics.Paint;
 import android.graphics.PointF;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Scroller;
@@ -18,14 +18,17 @@ public class LeftSwipeLayout extends LinearLayout {
 
     public static final int STATE_CLOSED = 0;
     public static final int STATE_OPEN = 1;
+//    public static final int STATE_SCROLL = 2;
 
     private int state = STATE_CLOSED;
 
-    private boolean scrolling;
+    private boolean isDragging;
 
     private View rightLayout;
 
     private Scroller mScroller;
+
+    private int mTouchSlop;
 
     public LeftSwipeLayout(Context context) {
         this(context, null);
@@ -38,6 +41,7 @@ public class LeftSwipeLayout extends LinearLayout {
     public LeftSwipeLayout(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
         mScroller = new Scroller(context);
+        mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
     }
 
     @Override
@@ -61,6 +65,7 @@ public class LeftSwipeLayout extends LinearLayout {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        //只有子View个数为2且当前线性布局方向为横向时，才做事件处理
         if (getChildCount() != 2 || getOrientation() != HORIZONTAL) {
             return super.onTouchEvent(event);
         }
@@ -69,7 +74,7 @@ public class LeftSwipeLayout extends LinearLayout {
                 downPoint.set(event.getX(), event.getY());
                 return true;
             case MotionEvent.ACTION_MOVE:
-                if (scrolling) {
+                if (isDragging) {
                     float offsetX = event.getX() - lastX;
                     //滑动逻辑
                     if ((getScrollX() >= rightLayout.getWidth() && offsetX <= 0)
@@ -88,10 +93,9 @@ public class LeftSwipeLayout extends LinearLayout {
                 }
                 float offsetXAbs = Math.abs(event.getX() - downPoint.x);
                 float offsetYAbs = Math.abs(event.getY() - downPoint.y);
-                float startScrollOffset = 10;
-                if (offsetXAbs > startScrollOffset || offsetYAbs > startScrollOffset) { //滑动超过一定距离
-                    if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移
-                        scrolling = true;
+                if (offsetXAbs > mTouchSlop || offsetYAbs > mTouchSlop) { //滑动超过一定距离
+                    if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移，处理并消费事件
+                        isDragging = true;
                         lastX = event.getX();
                         return true;
                     } else {
@@ -102,14 +106,20 @@ public class LeftSwipeLayout extends LinearLayout {
                 }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                if (scrolling) {
-                    //复位逻辑，展开或关闭
-                    if (getScrollX() < rightLayout.getWidth() / 2) {
+                isDragging = false;
+                //复位逻辑，展开或关闭
+                if (state == STATE_OPEN) {
+                    if (getScrollX() < rightLayout.getWidth() * 2 / 3) {
                         close();
                     } else {
                         open();
                     }
-                    scrolling = false;
+                } else {
+                    if (getScrollX() < rightLayout.getWidth() / 3) {
+                        close();
+                    } else {
+                        open();
+                    }
                 }
                 break;
         }
