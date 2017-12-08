@@ -98,9 +98,9 @@ public class LeftSwipeLayout extends LinearLayout {
             return super.onTouchEvent(event);
         }
         switch (event.getAction()) {
-//            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_DOWN:
 //                downPoint.set(event.getX(), event.getY());
-//                return true;
+                return true;
             case MotionEvent.ACTION_MOVE:
                 if (isDragging) {
                     float offsetX = event.getX() - lastX;
@@ -123,7 +123,6 @@ public class LeftSwipeLayout extends LinearLayout {
                 float offsetYAbs = Math.abs(event.getY() - lastY);
                 if (offsetXAbs > mTouchSlop || offsetYAbs > mTouchSlop) { //滑动超过一定距离
                     if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移，处理并消费事件
-                        requestDisallowInterceptTouchEvent(false);
                         isDragging = true;
                         lastX = event.getX();
                         return true;
@@ -157,7 +156,6 @@ public class LeftSwipeLayout extends LinearLayout {
 
     public void quickClose() {
         scrollTo(0, 0);
-        postInvalidate();
         state = STATE_CLOSED;
     }
 
