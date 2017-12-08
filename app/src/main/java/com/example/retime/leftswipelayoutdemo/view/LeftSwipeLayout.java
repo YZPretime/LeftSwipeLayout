@@ -97,17 +97,20 @@ public class LeftSwipeLayout extends LinearLayout {
         if (getChildCount() != 2 || getOrientation() != HORIZONTAL) {
             return super.onTouchEvent(event);
         }
+        boolean isConsume = super.onTouchEvent(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
 //                downPoint.set(event.getX(), event.getY());
-                return true;
+                isConsume = true;
+                break;
             case MotionEvent.ACTION_MOVE:
                 if (isDragging) {
                     float offsetX = event.getX() - lastX;
                     //滑动逻辑
                     if ((getScrollX() >= rightLayout.getWidth() && offsetX <= 0)
                             || (getScrollX() <= 0 && offsetX >= 0)) {
-                        return false;
+                        isConsume = false;
+                        break;
                     }
                     int scrollToX = (int) (getScrollX() - offsetX);
                     if (scrollToX < 0) {
@@ -117,21 +120,19 @@ public class LeftSwipeLayout extends LinearLayout {
                     }
                     scrollTo(scrollToX, 0);
                     lastX = event.getX();
-                    return true;
-                }
-                float offsetXAbs = Math.abs(event.getX() - lastX);
-                float offsetYAbs = Math.abs(event.getY() - lastY);
-                if (offsetXAbs > mTouchSlop || offsetYAbs > mTouchSlop) { //滑动超过一定距离
-                    if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移，处理并消费事件
-                        isDragging = true;
-                        lastX = event.getX();
-                        return true;
-                    } else {
-                        return super.onTouchEvent(event);
+                    isConsume = true;
+                } else {
+                    float offsetXAbs = Math.abs(event.getX() - lastX);
+                    float offsetYAbs = Math.abs(event.getY() - lastY);
+                    if (offsetXAbs > mTouchSlop || offsetYAbs > mTouchSlop) { //滑动超过一定距离
+                        if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移，处理并消费事件
+                            isDragging = true;
+                            lastX = event.getX();
+                            isConsume = true;
+                        }
                     }
-                } else { //滑动还没到一定距离的情况下，返回true
-                    return super.onTouchEvent(event);
                 }
+                break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 isDragging = false;
@@ -151,7 +152,7 @@ public class LeftSwipeLayout extends LinearLayout {
                 }
                 break;
         }
-        return super.onTouchEvent(event);
+        return isConsume;
     }
 
     public void quickClose() {
