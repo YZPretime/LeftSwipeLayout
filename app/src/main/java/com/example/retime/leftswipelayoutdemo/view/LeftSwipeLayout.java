@@ -60,8 +60,36 @@ public class LeftSwipeLayout extends LinearLayout {
         }
     }
 
+    public int getState() {
+        return state;
+    }
+
     private PointF downPoint = new PointF();
     private float lastX;
+    private float lastY;
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        //只有子View个数为2且当前线性布局方向为横向时，才做事件拦截处理
+        if (getChildCount() != 2 || getOrientation() != HORIZONTAL) {
+            return super.onInterceptTouchEvent(ev);
+        }
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                lastX = ev.getX();
+                lastY = ev.getY();
+                break;
+            case MotionEvent.ACTION_MOVE:
+                float offsetXAbs = Math.abs(ev.getX() - lastX);
+                float offsetYAbs = Math.abs(ev.getY() - lastY);
+                if (offsetXAbs > offsetYAbs && offsetXAbs > mTouchSlop) {
+                    requestDisallowInterceptTouchEvent(true);
+                    return true;
+                }
+                break;
+        }
+        return super.onInterceptTouchEvent(ev);
+    }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
@@ -70,9 +98,9 @@ public class LeftSwipeLayout extends LinearLayout {
             return super.onTouchEvent(event);
         }
         switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                downPoint.set(event.getX(), event.getY());
-                return true;
+//            case MotionEvent.ACTION_DOWN:
+//                downPoint.set(event.getX(), event.getY());
+//                return true;
             case MotionEvent.ACTION_MOVE:
                 if (isDragging) {
                     float offsetX = event.getX() - lastX;
@@ -91,18 +119,19 @@ public class LeftSwipeLayout extends LinearLayout {
                     lastX = event.getX();
                     return true;
                 }
-                float offsetXAbs = Math.abs(event.getX() - downPoint.x);
-                float offsetYAbs = Math.abs(event.getY() - downPoint.y);
+                float offsetXAbs = Math.abs(event.getX() - lastX);
+                float offsetYAbs = Math.abs(event.getY() - lastY);
                 if (offsetXAbs > mTouchSlop || offsetYAbs > mTouchSlop) { //滑动超过一定距离
                     if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移，处理并消费事件
+                        requestDisallowInterceptTouchEvent(false);
                         isDragging = true;
                         lastX = event.getX();
                         return true;
                     } else {
-                        return false;
+                        return super.onTouchEvent(event);
                     }
                 } else { //滑动还没到一定距离的情况下，返回true
-                    return true;
+                    return super.onTouchEvent(event);
                 }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
@@ -110,15 +139,15 @@ public class LeftSwipeLayout extends LinearLayout {
                 //复位逻辑，展开或关闭
                 if (state == STATE_OPEN) {
                     if (getScrollX() < rightLayout.getWidth() * 2 / 3) {
-                        close();
+                        smoothClose();
                     } else {
-                        open();
+                        smoothOpen();
                     }
                 } else {
                     if (getScrollX() < rightLayout.getWidth() / 3) {
-                        close();
+                        smoothClose();
                     } else {
-                        open();
+                        smoothOpen();
                     }
                 }
                 break;
@@ -126,13 +155,19 @@ public class LeftSwipeLayout extends LinearLayout {
         return super.onTouchEvent(event);
     }
 
-    public void close() {
+    public void quickClose() {
+        scrollTo(0, 0);
+        postInvalidate();
+        state = STATE_CLOSED;
+    }
+
+    public void smoothClose() {
         mScroller.startScroll(getScrollX(), 0, -getScrollX(), 0);
         state = STATE_CLOSED;
         postInvalidate();
     }
 
-    public void open() {
+    public void smoothOpen() {
         int rightLayoutWidth = rightLayout == null ? 0 : rightLayout.getWidth();
         mScroller.startScroll(getScrollX(), 0, rightLayoutWidth - getScrollX(), 0);
         state = STATE_OPEN;

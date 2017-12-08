@@ -10,6 +10,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.retime.leftswipelayoutdemo.R;
 
@@ -32,8 +33,20 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onBindViewHolder(Holder holder, int position) {
+        public void onBindViewHolder(Holder holder, final int position) {
             holder.tvMain.setText("主内容 " + position);
+            holder.tvMain.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Toast.makeText(MainActivity.this, "点击了" + position, Toast.LENGTH_SHORT).show();
+                }
+            });
+            holder.tvDelete.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Toast.makeText(MainActivity.this, "点击了删除" + position, Toast.LENGTH_SHORT).show();
+                }
+            });
         }
 
         @Override
@@ -44,10 +57,12 @@ public class MainActivity extends AppCompatActivity {
         class Holder extends RecyclerView.ViewHolder {
 
             private TextView tvMain;
+            private TextView tvDelete;
 
             public Holder(View itemView) {
                 super(itemView);
                 tvMain = (TextView) itemView.findViewById(R.id.tv_main);
+                tvDelete = (TextView) itemView.findViewById(R.id.tv_delete);
             }
         }
     }
