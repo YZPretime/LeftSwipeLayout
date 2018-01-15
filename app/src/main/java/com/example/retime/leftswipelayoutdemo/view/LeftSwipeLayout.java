@@ -69,26 +69,47 @@ public class LeftSwipeLayout extends LinearLayout {
     private float lastY;
 
     @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        switch (ev.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                lastX = ev.getX();
+                lastY = ev.getY();
+                getParent().requestDisallowInterceptTouchEvent(true);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                float offsetXAbs = Math.abs(ev.getX() - lastX);
+                float offsetYAbs = Math.abs(ev.getY() - lastY);
+                if (offsetXAbs <= offsetYAbs && offsetXAbs > mTouchSlop) {
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                }
+                break;
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        boolean intercepted = false;
         //只有子View个数为2且当前线性布局方向为横向时，才做事件拦截处理
         if (getChildCount() != 2 || getOrientation() != HORIZONTAL) {
-            return super.onInterceptTouchEvent(ev);
+            return false;
         }
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 lastX = ev.getX();
                 lastY = ev.getY();
+                intercepted = false;
                 break;
             case MotionEvent.ACTION_MOVE:
                 float offsetXAbs = Math.abs(ev.getX() - lastX);
                 float offsetYAbs = Math.abs(ev.getY() - lastY);
-                if (offsetXAbs > offsetYAbs && offsetXAbs > mTouchSlop) {
-                    requestDisallowInterceptTouchEvent(true);
-                    return true;
-                }
+                intercepted = offsetXAbs > offsetYAbs && offsetXAbs > mTouchSlop;
+                break;
+            case MotionEvent.ACTION_UP:
+                intercepted = false;
                 break;
         }
-        return super.onInterceptTouchEvent(ev);
+        return intercepted;
     }
 
     @Override
@@ -97,11 +118,11 @@ public class LeftSwipeLayout extends LinearLayout {
         if (getChildCount() != 2 || getOrientation() != HORIZONTAL) {
             return super.onTouchEvent(event);
         }
-        boolean isConsume = super.onTouchEvent(event);
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-//                downPoint.set(event.getX(), event.getY());
-                isConsume = true;
+                if (!mScroller.isFinished()) {
+                    mScroller.abortAnimation();
+                }
                 break;
             case MotionEvent.ACTION_MOVE:
                 if (isDragging) {
@@ -109,8 +130,7 @@ public class LeftSwipeLayout extends LinearLayout {
                     //滑动逻辑
                     if ((getScrollX() >= rightLayout.getWidth() && offsetX <= 0)
                             || (getScrollX() <= 0 && offsetX >= 0)) {
-                        isConsume = false;
-                        break;
+                        return super.onTouchEvent(event);
                     }
                     int scrollToX = (int) (getScrollX() - offsetX);
                     if (scrollToX < 0) {
@@ -120,7 +140,7 @@ public class LeftSwipeLayout extends LinearLayout {
                     }
                     scrollTo(scrollToX, 0);
                     lastX = event.getX();
-                    isConsume = true;
+                    return true;
                 } else {
                     float offsetXAbs = Math.abs(event.getX() - lastX);
                     float offsetYAbs = Math.abs(event.getY() - lastY);
@@ -128,31 +148,34 @@ public class LeftSwipeLayout extends LinearLayout {
                         if (offsetXAbs > offsetYAbs) { //x轴偏移大于y轴偏移，处理并消费事件
                             isDragging = true;
                             lastX = event.getX();
-                            isConsume = true;
+                            return true;
                         }
                     }
                 }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                isDragging = false;
-                //复位逻辑，展开或关闭
-                if (state == STATE_OPEN) {
-                    if (getScrollX() < rightLayout.getWidth() * 2 / 3) {
-                        smoothClose();
+                if (isDragging) {
+                    //复位逻辑，展开或关闭
+                    if (state == STATE_OPEN) {
+                        if (getScrollX() < rightLayout.getWidth() * 2 / 3) {
+                            smoothClose();
+                        } else {
+                            smoothOpen();
+                        }
                     } else {
-                        smoothOpen();
+                        if (getScrollX() < rightLayout.getWidth() / 3) {
+                            smoothClose();
+                        } else {
+                            smoothOpen();
+                        }
                     }
-                } else {
-                    if (getScrollX() < rightLayout.getWidth() / 3) {
-                        smoothClose();
-                    } else {
-                        smoothOpen();
-                    }
+                    isDragging = false;
+                    return true;
                 }
                 break;
         }
-        return isConsume;
+        return true;
     }
 
     public void quickClose() {
