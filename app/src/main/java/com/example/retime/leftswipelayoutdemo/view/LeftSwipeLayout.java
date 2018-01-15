@@ -1,7 +1,6 @@
 package com.example.retime.leftswipelayoutdemo.view;
 
 import android.content.Context;
-import android.graphics.PointF;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
@@ -64,7 +63,10 @@ public class LeftSwipeLayout extends LinearLayout {
         return state;
     }
 
-    private PointF downPoint = new PointF();
+    private float dispatchDownX;
+    private float dispatchDownY;
+    private float interceptDownX;
+    private float interceptDownY;
     private float lastX;
     private float lastY;
 
@@ -72,13 +74,13 @@ public class LeftSwipeLayout extends LinearLayout {
     public boolean dispatchTouchEvent(MotionEvent ev) {
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                lastX = ev.getX();
-                lastY = ev.getY();
+                dispatchDownX = ev.getX();
+                dispatchDownY = ev.getY();
                 getParent().requestDisallowInterceptTouchEvent(true);
                 break;
             case MotionEvent.ACTION_MOVE:
-                float offsetXAbs = Math.abs(ev.getX() - lastX);
-                float offsetYAbs = Math.abs(ev.getY() - lastY);
+                float offsetXAbs = Math.abs(ev.getX() - dispatchDownX);
+                float offsetYAbs = Math.abs(ev.getY() - dispatchDownY);
                 if (offsetXAbs <= offsetYAbs && offsetXAbs > mTouchSlop) {
                     getParent().requestDisallowInterceptTouchEvent(false);
                 }
@@ -96,13 +98,13 @@ public class LeftSwipeLayout extends LinearLayout {
         }
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                lastX = ev.getX();
-                lastY = ev.getY();
+                interceptDownX = ev.getX();
+                interceptDownY = ev.getY();
                 intercepted = false;
                 break;
             case MotionEvent.ACTION_MOVE:
-                float offsetXAbs = Math.abs(ev.getX() - lastX);
-                float offsetYAbs = Math.abs(ev.getY() - lastY);
+                float offsetXAbs = Math.abs(ev.getX() - interceptDownX);
+                float offsetYAbs = Math.abs(ev.getY() - interceptDownY);
                 intercepted = offsetXAbs > offsetYAbs && offsetXAbs > mTouchSlop;
                 break;
             case MotionEvent.ACTION_UP:
